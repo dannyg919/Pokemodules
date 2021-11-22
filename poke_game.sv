@@ -20,6 +20,11 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
+
+
+
+
+
 module poke_game(
    input wire vclk_in,        // 65MHz clock
    input wire rst_in,         // 1 to initialize module
@@ -42,6 +47,16 @@ module poke_game(
     );
     
     logic [11:0]screen_pixel;
+    logic [11:0]char_pixel;
+    
+    logic [10:0] player_x;
+    logic [9:0] player_y;
+    
+    
+    player_controller contr(.vclk(vclk_in), .reset(rst_in), .hcount(hcount_in), .vcount(vcount_in), 
+    .up(up_in), .down(down_in), .left(left_in), .right(right_in),
+    .player_x(player_x), .player_y(player_y));
+    
     
     always_ff @(posedge vclk_in) begin
         if(rst_in) begin
@@ -59,16 +74,36 @@ module poke_game(
             if(hcount_in == 0 && vcount_in == 0) begin //Update per frame
             end
             
-            pixel_out <= {screen_pixel[11:8], screen_pixel[7:4], screen_pixel[3:0]};     
+            if(char_pixel > 0) begin
+                pixel_out <= {char_pixel[11:8], char_pixel[7:4], char_pixel[3:0]};
+            end else begin
+                  pixel_out <= {screen_pixel[11:8], screen_pixel[7:4] , screen_pixel[3:0]};  
+            end
+                
+            
+             
         
         end
     end
     
+    logic [5:0] tile;
+
+    
+    picture_blob level(.pixel_clk_in(vclk_in),.x_in(0),.y_in(0),.hcount_in(hcount_in),.vcount_in(vcount_in), .pixel_out(screen_pixel));
+    
+    
+    blob #(.WIDTH(16),.HEIGHT(16),.COLOR(12'hF00)) ch(.x_in(player_x), .y_in(player_y), .hcount_in(hcount_in),
+    .vcount_in(vcount_in), .pixel_out(char_pixel));
+    
+    //window win(.x_in(0),.y_in(0),.hcount_in(hcount_in),.vcount_in(vcount_in),
+            //.pixel_out(screen_pixel));
     
 
-    window win(.x_in(432),.y_in(312),.hcount_in(hcount_in),.vcount_in(vcount_in),
-             .pixel_out(screen_pixel));
-             
+
+
 
     
 endmodule
+
+
+
