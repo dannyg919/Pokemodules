@@ -70,6 +70,7 @@ input wire rst_in,         // 1 to initialize module
     logic [10:0] player_health_x;
     logic [9:0] player_health_y;
     logic [11:0] player_health_pixel;
+    logic [11:0] run_pixel,fight_pixel,menu_pixel,arrow_pixel;
     parameter PLAYER_DAMAGE=10;
     parameter ENEMY_DAMAGE=5;
     parameter XP_GAIN=10;
@@ -101,14 +102,14 @@ input wire rst_in,         // 1 to initialize module
     if (start_timer) begin
          start_timer<=0; //make sure this is 0 if it is 1 after every clock cycle so that it doesnt keep restarting clock
     end
-     pixel_out <= {player_pixel[11:8] + enemy_pixel[11:8]+ player_health_pixel[11:8]+enemy_health_pixel[11:8],
-                        player_pixel[7:4] + enemy_pixel[7:4] + player_health_pixel[7:4]+enemy_health_pixel[7:4],
-                        player_pixel[3:0] + enemy_pixel[3:0] + player_health_pixel[3:0]+enemy_health_pixel[3:0]};
+     pixel_out <= {player_pixel[11:8] + enemy_pixel[11:8]+ player_health_pixel[11:8]+enemy_health_pixel[11:8]+run_pixel[11:8]+fight_pixel[11:8]+menu_pixel[11:8]+arrow_pixel[11:8],
+                        player_pixel[7:4] + enemy_pixel[7:4] + player_health_pixel[7:4]+enemy_health_pixel[7:4]+run_pixel[7:4]+fight_pixel[7:4]+menu_pixel[7:4]+arrow_pixel[7:4],
+                        player_pixel[3:0] + enemy_pixel[3:0] + player_health_pixel[3:0]+enemy_health_pixel[3:0]+run_pixel[3:0]+fight_pixel[3:0]+menu_pixel[3:0]+arrow_pixel[3:0]};
     end
    
     
-    blob #(.WIDTH(56),.HEIGHT(56),.COLOR(12'h00F))   // blue!
-     player(.x_in(432+14),.y_in(312+144-40-14-56),.hcount_in(hcount_in),.vcount_in(vcount_in),
+    blob #(.WIDTH(32),.HEIGHT(32),.COLOR(12'h00F))   // blue!
+     player(.x_in(432+14),.y_in(312+144-40-14-32),.hcount_in(hcount_in),.vcount_in(vcount_in),
              .pixel_out(player_pixel));
     
     blob #(.WIDTH(56),.HEIGHT(56),.COLOR(12'hF00))   // red!
@@ -122,7 +123,19 @@ input wire rst_in,         // 1 to initialize module
         
        blob #(.WIDTH(50),.HEIGHT(10),.COLOR(12'h0F0))   // green
      enemy_health_blob(.x_in(432+160-14-50),.y_in(312+144-40-14-10),.hcount_in(hcount_in),.vcount_in(vcount_in),
-             .pixel_out(enemy_health_pixel));     
+             .pixel_out(enemy_health_pixel)); 
+        blob #(.WIDTH(40),.HEIGHT(8),.COLOR(12'hFF0))   // yellow
+     fight(.x_in(432+16),.y_in(312+144-16-8),.hcount_in(hcount_in),.vcount_in(vcount_in),
+             .pixel_out(fight_pixel));   
+        blob #(.WIDTH(24),.HEIGHT(8),.COLOR(12'hF00))   // red
+     run_blob(.x_in(432+16+40+16),.y_in(312+144-16-8),.hcount_in(hcount_in),.vcount_in(vcount_in),
+             .pixel_out(run_pixel)); 
+      blob #(.WIDTH(160),.HEIGHT(40),.COLOR(12'hFFF))   // green
+     menu(.x_in(432),.y_in(312+144-40),.hcount_in(hcount_in),.vcount_in(vcount_in),
+             .pixel_out(menu_pixel));   
+      blob #(.WIDTH(8),.HEIGHT(8),.COLOR(12'h000))   // black
+     arrow(.x_in(432+8),.y_in(312+144-16-8),.hcount_in(hcount_in),.vcount_in(vcount_in),
+             .pixel_out(arrow_pixel));   
 endmodule
 
 
