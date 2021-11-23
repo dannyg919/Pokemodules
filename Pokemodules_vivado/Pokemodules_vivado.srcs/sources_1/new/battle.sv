@@ -86,14 +86,14 @@ input wire rst_in,         // 1 to initialize module
         enemy_health=7'd100;
         health_out<=health_in;
         battle<=0;
-        enemy_health_change<=50;
-        player_health_change<=50;
+        enemy_health_change<=0;
+        player_health_change<=0;
     end else begin
     if (health_out>0 && enemy_health>0)begin
         if (turn) begin
             if (battle) begin
                 enemy_health<=enemy_health-PLAYER_DAMAGE;
-                enemy_health_change<=enemy_health_change-(PLAYER_DAMAGE/2);
+                enemy_health_change<=enemy_health_change+(PLAYER_DAMAGE/2);
                 turn<=~turn;
             end else begin
                 if (left_in) begin
@@ -113,7 +113,7 @@ input wire rst_in,         // 1 to initialize module
             end
         end else begin
             health_out<=health_out-ENEMY_DAMAGE;
-            player_health_change<=player_health_change-(ENEMY_DAMAGE/2);
+            player_health_change<=player_health_change+(ENEMY_DAMAGE/2);
             turn<=~turn;
         end
    end else begin
