@@ -36,7 +36,10 @@ module blob
    end
 endmodule
 
-module battle(input wire clk_in,input wire [7:0] health_in,input wire [7:0] xp_in,
+module battle(
+input wire clk_in,
+input wire [7:0] health_in,
+//input wire [7:0] xp_in,
 input wire rst_in,         // 1 to initialize module
    input wire left_in,          // move left
    input wire right_in,         // move right
@@ -52,30 +55,27 @@ input wire rst_in,         // 1 to initialize module
    output logic pblank_out,       // game's blanking
    output logic [11:0] pixel_out,  // game's pixel  // r=11:8, g=7:4, b=3:0
 
-    output logic battle, output logic start_timer, output logic [7:0] health_out, output logic [7:0] xp_out, output logic [3:0] state);
+    output logic run,
+    //output logic start_timer, 
+    output logic [7:0] health_out
+    //output logic [7:0] xp_out,
+    // output logic [3:0] state
+    );
     logic turn;
-    logic run;
+    logic battle;
     logic [7:0] enemy_health;
-    logic battle_start=1'b0;
-    //logic [9:0] player_y;
     logic [11:0] player_pixel;
-    //logic [10:0] player_x;
-    
-    logic [9:0] enemy_y;
     logic [11:0] enemy_pixel;
-    logic [10:0] enemy_x;
     
     logic [10:0] enemy_health_change;
-    logic [9:0] enemy_health_y;
     logic [11:0] enemy_health_pixel;
     logic [10:0] player_health_change;
-    logic [9:0] player_health_y;
     logic [11:0] player_health_pixel;
     logic [11:0] run_pixel,fight_pixel,menu_pixel,arrow_pixel;
     logic [9:0] arrow_x;
     parameter PLAYER_DAMAGE=20;
     parameter ENEMY_DAMAGE=10;
-    parameter XP_GAIN=10;
+    //parameter XP_GAIN=10;
     parameter RUN_POS=432+16+40+8;
     parameter FIGHT_POS=432+8;
     
