@@ -39,7 +39,7 @@ endmodule
 module battle(
 input wire clk_in,
 input wire [7:0] health_in,
-//input wire [7:0] xp_in,
+input wire [7:0] xp_in,
 input wire rst_in,         // 1 to initialize module
    input wire left_in,          // move left
    input wire right_in,         // move right
@@ -57,8 +57,8 @@ input wire rst_in,         // 1 to initialize module
 
     output logic run,
     //output logic start_timer, 
-    output logic [7:0] health_out
-    //output logic [7:0] xp_out,
+    output logic [7:0] health_out,
+    output logic [7:0] xp_out
     // output logic [3:0] state
     );
     logic turn;
@@ -75,7 +75,7 @@ input wire rst_in,         // 1 to initialize module
     logic [9:0] arrow_x;
     parameter PLAYER_DAMAGE=20;
     parameter ENEMY_DAMAGE=10;
-    //parameter XP_GAIN=10;
+    parameter XP_GAIN=3; //should be logic depending on the enemy
     parameter RUN_POS=432+16+40+8;
     parameter FIGHT_POS=432+8;
     
@@ -88,6 +88,7 @@ input wire rst_in,         // 1 to initialize module
         battle<=0;
         enemy_health_change<=0;
         player_health_change<=0;
+        xp_out<=xp_in;
     end else begin
     if (health_out>0 && enemy_health>0)begin
         if (turn) begin
@@ -95,6 +96,7 @@ input wire rst_in,         // 1 to initialize module
                 enemy_health<=enemy_health-PLAYER_DAMAGE;
                 enemy_health_change<=enemy_health_change+(PLAYER_DAMAGE/2);
                 turn<=~turn;
+                battle<=0;
             end else begin
                 if (left_in) begin
                         arrow_x<=FIGHT_POS;
@@ -108,6 +110,7 @@ input wire rst_in,         // 1 to initialize module
                     end else begin
                         battle<=0;
                         run<=1;
+                        xp_out<=xp_in;
                     end
                 end
             end
@@ -116,8 +119,12 @@ input wire rst_in,         // 1 to initialize module
             player_health_change<=player_health_change+(ENEMY_DAMAGE/2);
             turn<=~turn;
         end
-   end else begin
+   end else if (health_out>0) begin
     run<=1;
+    xp_out<=xp_in+XP_GAIN; //base_value
+    end else begin
+    run<=1;
+    xp_out<=xp_in;
    end
 //    if (!battle_start) begin
 //        turn<=1'b1;
