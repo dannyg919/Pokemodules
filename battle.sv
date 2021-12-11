@@ -23,7 +23,7 @@
 module battle(
 input wire clk_in,
 input wire [7:0] health_in,
-//input wire [7:0] xp_in,
+input wire [7:0] xp_in,
 input wire rst_in,         // 1 to initialize module
    input wire left_in,          // move left
    input wire right_in,         // move right
@@ -33,13 +33,14 @@ input wire rst_in,         // 1 to initialize module
    input wire start,
    input wire [10:0] hcount_in, // horizontal index of current pixel (0..1023)
    input wire [9:0]  vcount_in, // vertical index of current pixel (0..767)
+   input wire [7:0] evol_count,
       
    output logic [11:0] pixel_out,  // game's pixel  // r=11:8, g=7:4, b=3:0
 
     output logic run,
     //output logic start_timer, 
-    output logic [7:0] health_out
-    //output logic [7:0] xp_out,
+    output logic [7:0] health_out,
+    output logic [7:0] xp_out
     // output logic [3:0] state
     );
     logic turn;
@@ -50,8 +51,8 @@ input wire rst_in,         // 1 to initialize module
     
     logic [10:0] enemy_health_change;
     logic [11:0] enemy_health_pixel;
-    logic [7:0]enemy_sel_x;
-    logic enemy_sel_y;
+    logic [7:0]enemy_sel_x,player_sel_x;
+    logic enemy_sel_y,player_sel_y;
     logic [10:0] player_health_change;
     logic [11:0] player_health_pixel;
     logic [11:0] font_pixel;
@@ -73,37 +74,67 @@ input wire rst_in,         // 1 to initialize module
     logic en;
     
     
-    lfsr rng( .clk(clk_in), .rst(rst_in), .en(1), .q(random_num));
+    lfsr rng( .clk(clk_in), .rst(rst_in), .en(en), .q(random_num));
     
     logic init;
+    
+    //NAMES AND STATS
+    logic char_count;
+    
+    logic [10:0] player_name_x[9:0]; //LIST OF LETTERS
+    logic [10:0] player_name_y[9:0];
+    poke_database player_data( .x_in(player_sel_x),
+    .name_x(player_name_x),
+    .name_y(player_name_y));
+    
+    
+    
     always_ff @(posedge clk_in) begin
     if (rst_in) begin
         arrow_x<=FIGHT_X;
         arrow_y <= FIGHT_Y;
         turn<=1'b1;
-        enemy_health=7'd100;
+        enemy_health<=7'd100;
         health_out<=health_in;
         battle<=0;
         enemy_health_change<=0;
         player_health_change<=0;
         run<= 0;
         counter <= 0;
+        
+        char_count <=0;
+        
+        enemy_sel_x <= 0;
+        enemy_sel_y <= 0;
+        player_sel_x <= 0;
+        player_sel_y <= 0;
         en <= 1;
         init <= 1;
+        xp_out<=xp_in;
     end else begin
     if (start) begin
-    
      
-     run<= 0;
      if (init) begin
-         enemy_health=7'd100;
-         enemy_sel_y <= random_num[0];
-         if(random_num <= 4'b1110) begin
-             enemy_sel_x <= random_num;
-
-         end
-         init<= 0;
+        arrow_x<=FIGHT_X;
+        arrow_y <= FIGHT_Y;
+        turn<=1'b1;
+        enemy_health<=7'd100;
+        health_out<=7'd100;
+        battle<=0;
+        enemy_health_change<=0;
+        player_health_change<=0;
+        counter <= 0;
+        init <= 0;
+        run<= 0;  
+         
      end
+        
+        enemy_sel_y <= 0;
+        if({random_num[0],random_num[7],random_num[4],random_num[2]} <= 4'b1110) begin
+            enemy_sel_x <= {random_num[0],random_num[7],random_num[4],random_num[2]};
+            en <= 0;
+        end
+     
      
       
       if(hcount_in == 0 && vcount_in == 0) begin
@@ -138,6 +169,8 @@ input wire rst_in,         // 1 to initialize module
                         end else if(arrow_x==RUN_X && arrow_y == RUN_Y) begin
                             battle<=0;
                             run<=1;
+                            init<= 1;
+                            en<=1;
                         end
                     end
                 end
@@ -152,10 +185,12 @@ input wire rst_in,         // 1 to initialize module
             end
        end else begin
         counter <= counter +1;
-        if(counter >= 32'd10) begin
+        if(counter >= 32'd15) begin
             run<=1;
+            xp_out<=xp_in+50;
             counter <= 0;
             init<= 1;
+            en<=1;
 
         end            
     
@@ -188,26 +223,93 @@ input wire rst_in,         // 1 to initialize module
     //    end
         end
                 if (hcount_in > 432+8 && hcount_in <= 432+8+64 && vcount_in >= 312+40 && vcount_in < 312+40+64) begin
-                    if (hcount_in > 432+64 && hcount_in <= 432+64+8 && vcount_in >= 312+96 && vcount_in <= 312+96+8) begin
-                    font_x <= 432+64;
-                    font_y <= 312+96;
-                    font_sel_x <= 81;
-                    font_sel_y <= 81;
-                    pixel_out <= {font_pixel[11:8],font_pixel[7:4],font_pixel[3:0]};
-                    end else begin
-                    pixel_out <= {player_pixel[11:8], player_pixel[7:4], player_pixel[3:0]};
-                    end
+
+                pixel_out <= {player_pixel[11:8], player_pixel[7:4], player_pixel[3:0]};
+                   
                 end else if(hcount_in > 432+96 && hcount_in <= 432+96+56 && vcount_in >= 312 && vcount_in < 312+56 )begin
                 
                 pixel_out <= {enemy_pixel[11:8],enemy_pixel[7:4],enemy_pixel[3:0]};
                    
-                end else if(hcount_in > arrow_x && hcount_in <= arrow_x+8 && vcount_in > arrow_y && vcount_in < arrow_y+8)begin //DRAW SEL ARROW
+                end else if(hcount_in > arrow_x && hcount_in <= arrow_x+8 && vcount_in >= arrow_y && vcount_in < arrow_y+8)begin //DRAW SEL ARROW
                 font_x <= arrow_x;
                 font_y <= arrow_y;
                 font_sel_x <= 117;
                 font_sel_y <= 54;
                 pixel_out <= {font_pixel[11:8],font_pixel[7:4],font_pixel[3:0]};
                 
+                
+                end else if(hcount_in >= 432+80 && hcount_in < 432+80+8 && vcount_in >= 312+56 && vcount_in < 312+56+8)begin //PLAYER LETTER 1
+                
+                    font_x <= 432+80;
+                    font_y <= 312+56;
+                    font_sel_x <= 0;//player_name_x[0];
+                    font_sel_y <= 0;//player_name_y[0];
+                    pixel_out <= {font_pixel[11:8],font_pixel[7:4],font_pixel[3:0]};
+                end else if(hcount_in >= 432+80+8 && hcount_in < 432+80+16 && vcount_in >= 312+56 && vcount_in < 312+56+8)begin //PLAYER LETTER 2
+                
+                    font_x <= 432+80+8;
+                    font_y <= 312+56;
+                    font_sel_x <= 1;//player_name_x[1];
+                    font_sel_y <= 1;//player_name_y[1]; 
+                    pixel_out <= {font_pixel[11:8],font_pixel[7:4],font_pixel[3:0]};                   
+                end else if(hcount_in >= 432+80+16 && hcount_in < 432+80+24 && vcount_in >= 312+56 && vcount_in < 312+56+8)begin //PLAYER LETTER 3
+                
+                    font_x <= 432+80+16;
+                    font_y <= 312+56;
+                    font_sel_x <= 1;//player_name_x[2];
+                    font_sel_y <= 1;//player_name_y[2];       
+                    pixel_out <= {font_pixel[11:8],font_pixel[7:4],font_pixel[3:0]};
+                end else if(hcount_in >= 432+80+24 && hcount_in < 432+80+32 && vcount_in >= 312+56 && vcount_in < 312+56+8)begin //PLAYER LETTER 4
+                
+                    font_x <= 432+80+24;
+                    font_y <= 312+56;
+                    font_sel_x <= 1;//player_name_x[3];
+                    font_sel_y <= 1;//player_name_y[3];
+                    pixel_out <= {font_pixel[11:8],font_pixel[7:4],font_pixel[3:0]}; 
+                end else if(hcount_in >= 432+80+32 && hcount_in < 432+80+40 && vcount_in >= 312+56 && vcount_in < 312+56+8)begin //PLAYER LETTER 5
+                
+                    font_x <= 432+80+32;
+                    font_y <= 312+56;
+                    font_sel_x <= 1;//player_name_x[4];
+                    font_sel_y <= 1;//player_name_y[4]; 
+                    pixel_out <= {font_pixel[11:8],font_pixel[7:4],font_pixel[3:0]};  
+                end else if(hcount_in >= 432+80+40 && hcount_in < 432+80+48 && vcount_in >= 312+56 && vcount_in < 312+56+8)begin //PLAYER LETTER 6
+                
+                    font_x <= 432+80+40;
+                    font_y <= 312+56;
+                    font_sel_x <= 1;//player_name_x[5];
+                    font_sel_y <= 1;//player_name_y[5];                                           
+                    pixel_out <= {font_pixel[11:8],font_pixel[7:4],font_pixel[3:0]};                                    
+
+                end else if(hcount_in >= 432+80+48 && hcount_in < 432+80+56 && vcount_in >= 312+56 && vcount_in < 312+56+8)begin //PLAYER LETTER 7
+                
+                    font_x <= 432+80+48;
+                    font_y <= 312+56;
+                    font_sel_x <= 1;//player_name_x[6];
+                    font_sel_y <= 1;//player_name_y[6];  
+                    pixel_out <= {font_pixel[11:8],font_pixel[7:4],font_pixel[3:0]};
+                end else if(hcount_in >= 432+80+56 && hcount_in < 432+80+64 && vcount_in >= 312+56 && vcount_in < 312+56+8)begin //PLAYER LETTER 8
+                
+                    font_x <= 432+80+56;
+                    font_y <= 312+56;
+                    font_sel_x <= 1;//player_name_x[7];
+                    font_sel_y <= 1;//player_name_y[7];                                         
+                    pixel_out <= {font_pixel[11:8],font_pixel[7:4],font_pixel[3:0]};   
+                                                    
+               end else if(hcount_in >= 432+80+64 && hcount_in < 432+80+72 && vcount_in >= 312+56 && vcount_in < 312+56+8)begin //PLAYER LETTER 9
+                
+                    font_x <= 432+80+64;
+                    font_y <= 312+56;
+                    font_sel_x <= 1;//player_name_x[8];
+                    font_sel_y <= 1;//player_name_y[8];                           
+                    pixel_out <= {font_pixel[11:8],font_pixel[7:4],font_pixel[3:0]};  
+               end else if(hcount_in >= 432+80+72 && hcount_in < 432+80+80 && vcount_in >= 312+56 && vcount_in < 312+56+8)begin //PLAYER LETTER 10
+                
+                    font_x <= 432+80+72;
+                    font_y <= 312+56;
+                    font_sel_x <= 1;//player_name_x[9];
+                    font_sel_y <= 1;//player_name_y[9];    
+                    pixel_out <= {font_pixel[11:8],font_pixel[7:4],font_pixel[3:0]};                                      
 
                 
                 end else if( enemy_health_pixel > 0 )begin
@@ -224,15 +326,6 @@ input wire rst_in,         // 1 to initialize module
 
                 end
 
-//                if (run_pixel > 0 || fight_pixel > 0 || arrow_pixel >0) begin
-//                pixel_out <= {player_pixel[11:8] + enemy_pixel[11:8]+ player_health_pixel[11:8]+enemy_health_pixel[11:8]+run_pixel[11:8]+fight_pixel[11:8]+arrow_pixel[11:8],
-//                        player_pixel[7:4] + enemy_pixel[7:4] + player_health_pixel[7:4]+enemy_health_pixel[7:4]+run_pixel[7:4]+fight_pixel[7:4]+arrow_pixel[7:4],
-//                       player_pixel[3:0] + enemy_pixel[3:0] + player_health_pixel[3:0]+enemy_health_pixel[3:0]+run_pixel[3:0]+fight_pixel[3:0]+arrow_pixel[3:0]};
-//                end else begin
-//                pixel_out <= {player_pixel[11:8] + enemy_pixel[11:8]+ player_health_pixel[11:8]+enemy_health_pixel[11:8]+run_pixel[11:8]+fight_pixel[11:8]+menu_pixel[11:8]+arrow_pixel[11:8],
-//                        player_pixel[7:4] + enemy_pixel[7:4] + player_health_pixel[7:4]+enemy_health_pixel[7:4]+run_pixel[7:4]+fight_pixel[7:4]+menu_pixel[7:4]+arrow_pixel[7:4],
-//                        player_pixel[3:0] + enemy_pixel[3:0] + player_health_pixel[3:0]+enemy_health_pixel[3:0]+run_pixel[3:0]+fight_pixel[3:0]+menu_pixel[3:0]+arrow_pixel[3:0]};
-//                end
       end
     end
     
@@ -243,17 +336,17 @@ input wire rst_in,         // 1 to initialize module
    .pixel_out(screen_pixel));
     
 
-    front_sprites enemy(.pixel_clk_in(clk_in),.x_in(432+96),.y_in(312),.sprite_sel_x(56*enemy_sel_x),.sprite_sel_y(56*enemy_sel_y), //ENEMY SPRITE
+    front_sprites enemy(.pixel_clk_in(clk_in),.x_in(432+96),.y_in(312),.sprite_sel_x(56*enemy_sel_x),.sprite_sel_y(0), //ENEMY SPRITE
     .hcount_in(hcount_in),.vcount_in(vcount_in), .pixel_out(enemy_pixel));
              
-    back_sprites player(.pixel_clk_in(clk_in),.x_in(432+8),.y_in(312+40),.sprite_sel_x(2),.sprite_sel_y(2), //PLAYER SPRITE
+    back_sprites player(.pixel_clk_in(clk_in),.x_in(432+8),.y_in(312+40),.sprite_sel_x(64*(player_sel_x+evol_count)+2*(player_sel_x+evol_count+1)),.sprite_sel_y(2), //PLAYER SPRITE
     .hcount_in(hcount_in),.vcount_in(vcount_in), .pixel_out(player_pixel));
              
-    health_blob #(.WIDTH(48),.HEIGHT(2),.COLOR(12'h0F0))   // green ENEMY HEALTH
+    moving_blob #(.WIDTH(48),.HEIGHT(2),.COLOR(12'h0F0))   // green ENEMY HEALTH
      enemy_health_blob(.x_in(432+33),.y_in(312+19),.hcount_in(hcount_in),.vcount_in(vcount_in),
              .change_x(enemy_health_change),.pixel_out(enemy_health_pixel));
          
-       health_blob #(.WIDTH(48),.HEIGHT(2),.COLOR(12'h0F0))   // green PLAYER HEALTH
+       moving_blob #(.WIDTH(48),.HEIGHT(2),.COLOR(12'h0F0))   // green PLAYER HEALTH
        player_health(.x_in(432+97),.y_in(312+75),.hcount_in(hcount_in),.vcount_in(vcount_in),
                   .change_x(player_health_change),.pixel_out(player_health_pixel)); 
 
@@ -288,20 +381,4 @@ endmodule
 
 
 
-module health_blob
-   #(parameter WIDTH = 64,            // default width: 64 pixels
-               HEIGHT = 64,           // default height: 64 pixels
-               COLOR = 12'hFFF)  // default color: white
-   (input wire [10:0] x_in,hcount_in,change_x,
-    input wire [9:0] y_in,vcount_in,
-    output logic [11:0] pixel_out);
-
-   always_comb begin
-      if  ((hcount_in >= x_in && hcount_in < (x_in+WIDTH-change_x)) &&
-            (vcount_in >= y_in && vcount_in < (y_in+HEIGHT)))
-        pixel_out = COLOR;
-      else 
-        pixel_out = 0;
-   end
-endmodule
 
